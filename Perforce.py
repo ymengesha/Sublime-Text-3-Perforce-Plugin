@@ -20,6 +20,7 @@ except ImportError:
 
 # global variable used when calling p4 - it stores the path of the file in the current view, used to determine with P4CONFIG to use
 # whenever a view is selected, the variable gets updated
+
 global_folder = ''
 
 class PerforceP4CONFIGHandler(sublime_plugin.EventListener):
@@ -331,7 +332,7 @@ def WarnUser(message):
     perforce_settings = sublime.load_settings('Perforce.sublime-settings')
     if(perforce_settings.get('perforce_warnings_enabled')):
         if(perforce_settings.get('perforce_log_warnings_to_status')):
-            sublime.status_message("Perforce [warning]: {0}".format(message))
+            sublime.active_window().status_message("Perforce [warning]: {0}".format(message))
         else:
             print("Perforce [warning]: {0}".format(message))
 
@@ -666,7 +667,7 @@ class PerforceSelectGraphicalDiffApplicationCommand(sublime_plugin.WindowCommand
         entry = applications.get('applications')[picked]
         f.close()
 
-        sublime.status_message(__name__ + ': Please make sure that {0} is reachable - you might need to restart Sublime Text 2.'.format(entry['exename']))
+        self.window.status_message(__name__ + ': Please make sure that {0} is reachable - you might need to restart Sublime Text 2.'.format(entry['exename']))
 
         settings = sublime.load_settings('Perforce.sublime-settings')
         settings.set('perforce_selectedgraphicaldiffapp', entry['name'])
@@ -1076,6 +1077,15 @@ class PerforceLogoutCommand(sublime_plugin.WindowCommand):
 
 class PerforceLoginCommand(sublime_plugin.WindowCommand):
     def run(self):
+        # first check if logged in already
+        user = GetUserFromClientspec()
+        command = ConstructCommand("p4 login -s {0}".format(user))
+        p = subprocess.Popen(command, stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=global_folder, shell=True)
+        p.communicate()
+        if not p.returncode:
+            self.window.status_message("{0} already logged in.".format(user))
+            return
+
         self.window.show_input_panel("Enter Perforce Password", "", self.on_done, None, None)
 
     def on_done(self, password):

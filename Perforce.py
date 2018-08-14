@@ -1069,7 +1069,7 @@ class PerforceSubmitCommand(sublime_plugin.WindowCommand):
 class PerforceLogoutCommand(sublime_plugin.WindowCommand):
     def run(self):
         try:
-            command = ConstructCommand("p4 set P4PASSWD=")
+            command = ConstructCommand("p4 logout")
             p = subprocess.Popen(command, stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=global_folder, shell=True)
             p.communicate()
         except ValueError:

@@ -1090,13 +1090,11 @@ class PerforceLoginCommand(sublime_plugin.WindowCommand):
 
     def on_done(self, password):
         try:
-            command = ConstructCommand("p4 logout")
+            command = ConstructCommand("p4 login")
             p = subprocess.Popen(command, stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=global_folder, shell=True)
-            p.communicate()
-            #unset var
-            command = ConstructCommand("p4 set P4PASSWD={0}".format(password))
-            p = subprocess.Popen(command, stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=global_folder, shell=True)
-            p.communicate()
+            p.communicate(input=password.encode('utf-8'))
+            if p.returncode:
+                self.window.status_message("login failed!")
         except ValueError:
             pass
 

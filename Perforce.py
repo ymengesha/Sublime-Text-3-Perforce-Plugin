@@ -1072,10 +1072,21 @@ class PerforceLogoutCommand(sublime_plugin.WindowCommand):
             command = ConstructCommand("p4 logout")
             p = subprocess.Popen(command, stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=global_folder, shell=True)
             p.communicate()
+
+            # if password authenticated
+            command = ConstructCommand("p4 set P4PASSWD=")
+            p = subprocess.Popen(command, stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=global_folder, shell=True)
+            p.communicate()
+
         except ValueError:
             pass
 
+maskChar = '*'
+
 class PerforceLoginCommand(sublime_plugin.WindowCommand):
+    inputPanel = None
+    clearPassword = []
+
     def run(self):
         # first check if logged in already
         user = GetUserFromClientspec()
@@ -1086,17 +1097,46 @@ class PerforceLoginCommand(sublime_plugin.WindowCommand):
             self.window.status_message("{0} already logged in.".format(user))
             return
 
-        self.window.show_input_panel("Enter Perforce Password", "", self.on_done, None, None)
+        self.inputPanel = self.window.show_input_panel("Enter Perforce Password", "", self.on_done, self.on_change, None)
+
+    def isMasked(self, text):
+        return all(ch == maskChar for ch in text)
+
+    def on_change(self, password):
+        for i, c in enumerate(password):
+            if c != maskChar:
+                self.clearPassword.insert(i, c)
+
+        if self.inputPanel:
+            # check for cases when user only makes deletions from the fully masked input
+            if self.isMasked(password) and len(password) < len(self.clearPassword):
+                sel = self.inputPanel.sel()
+                if sel:
+                    # get current caret position
+                    pos = sel[0].a
+                    self.clearPassword.pop(pos)
+
+            if not self.isMasked(password):
+                self.inputPanel.run_command("mask_input")
 
     def on_done(self, password):
         try:
             command = ConstructCommand("p4 login")
             p = subprocess.Popen(command, stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=global_folder, shell=True)
-            p.communicate(input=password.encode('utf-8'))
+            p.communicate(input="".join(self.clearPassword).encode('utf-8'))
             if p.returncode:
-                self.window.status_message("login failed!")
+                self.window.status_message("login failed.")
+            else:
+                self.window.status_message("login successful.")
+            self.clearPassword.clear()
         except ValueError:
             pass
+
+class MaskInputCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        size = self.view.size()
+        toBeReplaced = sublime.Region(0, size)
+        self.view.replace(edit, toBeReplaced, size * maskChar)
 
 class PerforceUnshelveClCommand(sublime_plugin.WindowCommand):
     def run(self):

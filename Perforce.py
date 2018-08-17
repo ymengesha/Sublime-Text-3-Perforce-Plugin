@@ -341,23 +341,10 @@ def LogResults(success, message):
     else:
         WarnUser(message);
 
-def IsFileWritable(in_filename):
-    if(not in_filename):
-        return 0
-
-    # if it doesn't exist, it's "writable"
-    if(not os.path.isfile(in_filename)):
-        return 1
-
-    filestats = os.stat(in_filename)[0];
-    if(filestats & stat.S_IWRITE):
-        return 1
-    return 0
-
 # Checkout section
 def Checkout(in_filename):
-    if(IsFileWritable(in_filename)):
-        return -1, "File is already writable."
+    if not os.path.isfile(in_filename):
+        return -1, "File does not exist."
 
     folder_name, filename = os.path.split(in_filename)
     isInDepot = IsFileInDepot(folder_name, filename)
@@ -371,9 +358,6 @@ def Checkout(in_filename):
 class PerforceAutoCheckout(sublime_plugin.EventListener):
     def on_modified(self, view):
         if(not view.file_name()):
-            return
-
-        if(IsFileWritable(view.file_name())):
             return
 
         perforce_settings = sublime.load_settings('Perforce.sublime-settings')
